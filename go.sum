@@ -1,6 +1,2 @@
-github.com/digitalocean/go-libvirt v0.0.0-20260609165003-6254771e63a8 h1:R4zqGCPowg1bfJXFxsS122mzkivaMz+wPLxBsF9qsiY=
-github.com/digitalocean/go-libvirt v0.0.0-20260609165003-6254771e63a8/go.mod h1:qb0Ofa71d3oXARQf633h2tNaeBxLsVxuDp+jcsVO2+4=
-golang.org/x/crypto v0.48.0 h1:/VRzVqiRSggnhY7gNRxPauEQ5Drw9haKdM0jqfcCFts=
-golang.org/x/crypto v0.48.0/go.mod h1:r0kV5h3qnFPlQnBSrULhlsRfryS2pmewsg+XfMgkVos=
-golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=
-golang.org/x/sys v0.41.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
+github.com/libvirt/libvirt-go v7.4.0+incompatible h1:crnSLkwPqCdXtg6jib/FxBG/hweAc/3Wxth1AehCXL4=
+github.com/libvirt/libvirt-go v7.4.0+incompatible/go.mod h1:34zsnB4iGeOv7Byj6qotuW8Ya4v4Tr43ttjz/F0wjLE=
