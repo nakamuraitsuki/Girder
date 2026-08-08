@@ -1,7 +1,7 @@
 package libvirt
 
 import (
-	"github.com/libvirt/libvirt-go"
+    "libvirt.org/go/libvirt"
 )
 
 type Client struct {
@@ -22,4 +22,18 @@ func NewClient() (*Client, error) {
 func (c *Client) Close() error {
 	_, err := c.conn.Close()
 	return err
+}
+
+// CreateVM は、指定されたXML定義に基づいて仮想マシンを作成する。
+func (c *Client) CreateVM(xml string) (*libvirt.Domain, error) {
+	domain, err := c.conn.DomainDefineXML(xml)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := domain.Create(); err != nil {
+		return nil, err
+	}
+
+	return domain, nil
 }
