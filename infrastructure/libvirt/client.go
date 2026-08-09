@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
@@ -50,7 +48,7 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 	}
 	defer pool.Free()
 
-	baseVolume, err := ensureBaseVolume(pool)
+	baseVolume, err := c.ensureBaseVolume(pool)
 	if err != nil {
 		return nil, fmt.Errorf("prepare base bolume: %w", err)
 	}
@@ -152,77 +150,78 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 
 // ensureBaseVolume ensures that the Alpine base image exists as a libvirt
 // storage volume.
-func ensureBaseVolume(pool *libvirt.StoragePool) (*libvirt.StorageVol, error) {
+func (c *Client) ensureBaseVolume(pool *libvirt.StoragePool) (*libvirt.StorageVol, error) {
 	volume, err := pool.LookupStorageVolByName(baseImageName)
 	if err == nil {
 		return volume, nil
 	}
 
-	// default pool must be a directory-based storage pool.
-	poolXML, err := pool.GetXMLDesc(0)
+	resp, err := http.Get(alpineImageURL)
 	if err != nil {
-		return nil, fmt.Errorf("get storage pool XML: %w", err)
-	}
-
-	var poolDef libvirtxml.StoragePool
-	if err := poolDef.Unmarshal(poolXML); err != nil {
-		return nil, fmt.Errorf("unmarshal storage pool XML: %w", err)
-	}
-
-	if poolDef.Target == nil || poolDef.Target.Path == "" {
-		return nil, fmt.Errorf("storage pool %s has no target path", storagePoolName)
-	}
-
-	imagePath := filepath.Join(
-		poolDef.Target.Path,
-		baseImageName,
-	)
-
-	// Download the base image if it dowe not exist yet.
-	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
-		if err := downloadFile(alpineImageURL, imagePath); err != nil {
-			return nil, fmt.Errorf("download base image: %w", err)
-		}
-	} else if err != nil {
-		return nil, fmt.Errorf("check base image existence: %w", err)
-	}
-
-	// Tell libvirt to rescan the directory pool.
-	if err := pool.Refresh(0); err != nil {
-		return nil, fmt.Errorf("refresh storage pool: %w", err)
-	}
-
-	volume, err = pool.LookupStorageVolByName(baseImageName)
-	if err != nil {
-		return nil, fmt.Errorf("lookup base volume after refresh: %w", err)
-	}
-
-	return volume, nil
-}
-
-// downloadFile downloads a file from the given URL and saves it to the specified
-//
-// This function is utility function so it is tail of the file.
-func downloadFile(url, destPath string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("http get: %w", err)
+		return nil, fmt.Errorf("http get: %w", err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http get: unexpected status code %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
+	}
+	if resp.ContentLength <= 0 {
+		return nil, fmt.Errorf("unknown content length, cannot pre-declare capacity")
 	}
 
-	file, err := os.Create(destPath)
+	volXML := &libvirtxml.StorageVolume{
+		Name:     baseImageName,
+		Capacity: &libvirtxml.StorageVolumeSize{Value: uint64(resp.ContentLength), Unit: "bytes"},
+		Target: &libvirtxml.StorageVolumeTarget{
+			Format: &libvirtxml.StorageVolumeTargetFormat{Type: "qcow2"},
+		},
+	}
+	volXMLText, err := volXML.Marshal()
 	if err != nil {
-		return fmt.Errorf("create file: %w", err)
-	}
-	defer file.Close()
-
-	if _, err := io.Copy(file, resp.Body); err != nil {
-		return fmt.Errorf("copy response body to file: %w", err)
+		return nil, fmt.Errorf("marshal volume XML: %w", err)
 	}
 
-	return nil
+	vol, err := pool.StorageVolCreateXML(volXMLText, 0)
+	if err != nil {
+		return nil, fmt.Errorf("create volume: %w", err)
+	}
+
+	if err := c.UploadVolume(vol, resp.Body, uint64(resp.ContentLength)); err != nil {
+		vol.Free()
+		return nil, err
+	}
+
+	return vol, nil
+}
+
+// UploadVolume writes the contents of r into vol via a libvirt stream.
+// It normalizes libvirt's Stream.Send-based API to the standard io.Reader
+// interface so callers never need to know about virStream semantics.
+func (c *Client) UploadVolume(vol *libvirt.StorageVol, r io.Reader, length uint64) error {
+	stream, err := c.conn.NewStream(0)
+	if err != nil {
+		return fmt.Errorf("new stream: %w", err)
+	}
+	defer stream.Free()
+
+	if err := vol.Upload(stream, 0, length, 0); err != nil {
+		return fmt.Errorf("upload: %w", err)
+	}
+
+	if _, err := io.Copy(streamWriter{stream}, r); err != nil {
+		stream.Abort()
+		return fmt.Errorf("stream copy: %w", err)
+	}
+
+	return stream.Finish()
+}
+
+// streamWriter adapts *libvirt.Stream to io.Writer.
+// This is unexported and confined to this file: it exists only because
+// Stream.Send has the io.Writer signature but not the io.Writer name.
+type streamWriter struct {
+	stream *libvirt.Stream
+}
+
+func (w streamWriter) Write(p []byte) (int, error) {
+	return w.stream.Send(p)
 }
