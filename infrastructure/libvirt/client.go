@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
@@ -48,7 +50,7 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 	}
 	defer pool.Free()
 
-	baseVolume, err := ensureBaseVolume(c.conn, pool)
+	baseVolume, err := ensureBaseVolume(pool)
 	if err != nil {
 		return nil, fmt.Errorf("prepare base bolume: %w", err)
 	}
@@ -148,104 +150,77 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 
 // ensureBaseVolume ensures that the Alpine base image exists as a libvirt
 // storage volume.
-func ensureBaseVolume(conn *libvirt.Connect, pool *libvirt.StoragePool) (*libvirt.StorageVol, error) {
+func ensureBaseVolume(pool *libvirt.StoragePool) (*libvirt.StorageVol, error) {
 	volume, err := pool.LookupStorageVolByName(baseImageName)
 	if err == nil {
 		return volume, nil
 	}
 
-	// The base volume does not exist yet.
-	// Download the Alpine image and import it into the libvirt storage pool.
-	resp, err := http.Get(alpineImageURL)
+	// default pool must be a directory-based storage pool.
+	poolXML, err := pool.GetXMLDesc(0)
 	if err != nil {
-		return nil, fmt.Errorf("download alpine image: %w", err)
+		return nil, fmt.Errorf("get storage pool XML: %w", err)
+	}
+
+	var poolDef libvirtxml.StoragePool
+	if err := poolDef.Unmarshal(poolXML); err != nil {
+		return nil, fmt.Errorf("unmarshal storage pool XML: %w", err)
+	}
+
+	if poolDef.Target == nil || poolDef.Target.Path == "" {
+		return nil, fmt.Errorf("storage pool %s has no target path", storagePoolName)
+	}
+
+	imagePath := filepath.Join(
+		poolDef.Target.Path,
+		baseImageName,
+	)
+
+	// Download the base image if it dowe not exist yet.
+	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+		if err := downloadFile(alpineImageURL, imagePath); err != nil {
+			return nil, fmt.Errorf("download base image: %w", err)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("check base image existence: %w", err)
+	}
+
+	// Tell libvirt to rescan the directory pool.
+	if err := pool.Refresh(0); err != nil {
+		return nil, fmt.Errorf("refresh storage pool: %w", err)
+	}
+
+	volume, err = pool.LookupStorageVolByName(baseImageName)
+	if err != nil {
+		return nil, fmt.Errorf("lookup base volume after refresh: %w", err)
+	}
+
+	return volume, nil
+}
+
+// downloadFile downloads a file from the given URL and saves it to the specified
+//
+// This function is utility function so it is tail of the file.
+func downloadFile(url, destPath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("http get: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(
-			"download Alpine image: %s",
-			resp.Status,
-		)
+		return fmt.Errorf("http get: unexpected status code %d", resp.StatusCode)
 	}
 
-	volumeXML := &libvirtxml.StorageVolume{
-		Name: baseImageName,
-		Target: &libvirtxml.StorageVolumeTarget{
-			Format: &libvirtxml.StorageVolumeTargetFormat{
-				Type: "qcow2",
-			},
-		},
-	}
-
-	xml, err := volumeXML.Marshal()
+	file, err := os.Create(destPath)
 	if err != nil {
-		return nil, fmt.Errorf("marshal volume XML: %w", err)
+		return fmt.Errorf("create file: %w", err)
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(file, resp.Body); err != nil {
+		return fmt.Errorf("copy response body to file: %w", err)
 	}
 
-	volume, err = pool.StorageVolCreateXML(xml, 0)
-	if err != nil {
-		return nil, fmt.Errorf("create base volume: %w", err)
-	}
-
-	stream, err := conn.NewStream(0)
-	if err != nil {
-		volume.Delete(0)
-		volume.Free()
-
-		return nil, fmt.Errorf("create upload stream: %w", err)
-	}
-
-	if err := volume.Upload(
-		stream,
-		0,
-		uint64(resp.ContentLength),
-		0,
-	); err != nil {
-		stream.Abort()
-		stream.Free()
-
-		volume.Delete(0)
-		volume.Free()
-
-		return nil, fmt.Errorf("start upload base volume: %w", err)
-	}
-
-	err = stream.SendAll(func(_ *libvirt.Stream, size int) ([]byte, error) {
-		buf := make([]byte, size)
-
-		n, err := resp.Body.Read(buf)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-
-		return buf[:n], nil
-	})
-	if err != nil {
-		stream.Abort()
-		stream.Free()
-
-		volume.Delete(0)
-		volume.Free()
-
-		return nil, fmt.Errorf("upload base volume: %w", err)
-	}
-
-	if err := stream.Finish(); err != nil {
-		stream.Free()
-
-		volume.Delete(0)
-		volume.Free()
-
-		return nil, fmt.Errorf("finish upload base volume: %w", err)
-	}
-
-	if err := stream.Free(); err != nil {
-		volume.Delete(0)
-		volume.Free()
-
-		return nil, fmt.Errorf("free upload stream: %w", err)
-	}
-
-	return volume, nil
+	return nil
 }
