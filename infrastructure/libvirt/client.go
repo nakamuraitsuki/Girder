@@ -1,7 +1,8 @@
 package libvirt
 
 import (
-    "libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 )
 
 // Client provides direct access to a libvirt connection.
@@ -30,18 +31,21 @@ func (c *Client) Close() error {
 	return err
 }
 
-// CreateVM defines and starts a new virtual machine from the given libvirt XML.
-//
-// The XML is passed directly to libvirt without introducing a Girder-specific domain representation.
-func (c *Client) CreateVM(xml string) (*libvirt.Domain, error) {
-	domain, err := c.conn.DomainDefineXML(xml)
+// CreateVM defines and starts a new virtual machine from the given libvirt domain object.
+func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
+	xml, err := domain.Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := domain.Create(); err != nil {
+	vm, err := c.conn.DomainDefineXML(xml)
+	if err != nil {
 		return nil, err
 	}
 
-	return domain, nil
+	if err := vm.Create(); err != nil {
+		return nil, err
+	}
+
+	return vm, nil
 }
