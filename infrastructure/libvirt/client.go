@@ -142,6 +142,8 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 	}
 
 	if err := vm.Create(); err != nil {
+		vm.Undefine()
+		vm.Free()
 		return nil, err
 	}
 
