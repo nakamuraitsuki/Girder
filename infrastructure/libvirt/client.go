@@ -4,20 +4,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
 
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 )
 
 const (
-	imageDir = "/var/lib/libvirt/images"
+	storagePoolName = "default"
 
-	alpineImageURL =
-		"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.0-x86_64-bios-cloudinit-metal-r0.qcow2"
-	baseImageName = "alpine-base.qcow2"
+	alpineImageURL = "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.0-x86_64-bios-cloudinit-metal-r0.qcow2"
+	baseImageName  = "alpine-base.qcow2"
 )
 
 type Client struct {
@@ -41,26 +37,48 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
-	if err := os.MkdirAll(imageDir, 0755); err != nil {
-		return nil, err
-	}
-
-	baseImage := filepath.Join(imageDir, baseImageName)
-	diskPath := filepath.Join(
-		imageDir,
-		fmt.Sprintf("%s.qcow2", domain.Name),
-	)
-
-	if err := ensureBaseImage(baseImage); err != nil {
-		return nil, err
-	}
-
-	if err := createDisk(baseImage, diskPath); err != nil {
-		return nil, err
-	}
 
 	if domain.Devices == nil {
 		domain.Devices = &libvirtxml.DomainDeviceList{}
+	}
+
+	pool, err := c.conn.LookupStoragePoolByName(storagePoolName)
+	if err != nil {
+		return nil, fmt.Errorf("lookup storage pool: %w", err)
+	}
+	defer pool.Free()
+
+	baseVolume, err := ensureBaseVolume(c.conn, pool)
+	if err != nil {
+		return nil, fmt.Errorf("prepare base bolume: %w", err)
+	}
+	defer baseVolume.Free()
+
+	volumeName := fmt.Sprintf("%s.qcow2", domain.Name)
+
+	volumeXML := &libvirtxml.StorageVolume{
+		Name: volumeName,
+		Target: &libvirtxml.StorageVolumeTarget{
+			Format: &libvirtxml.StorageVolumeTargetFormat{
+				Type: "qcow2",
+			},
+		},
+	}
+
+	volumeXMLText, err := volumeXML.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("marshal volume XML: %w", err)
+	}
+
+	volume, err := pool.StorageVolCreateXMLFrom(volumeXMLText, baseVolume, 0)
+	if err != nil {
+		return nil, fmt.Errorf("create volume from base: %w", err)
+	}
+	defer volume.Free()
+
+	volumePath, err := volume.GetPath()
+	if err != nil {
+		return nil, fmt.Errorf("get volume path: %w", err)
 	}
 
 	domain.Devices.Disks = append(
@@ -73,7 +91,7 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 			},
 			Source: &libvirtxml.DomainDiskSource{
 				File: &libvirtxml.DomainDiskSourceFile{
-					File: diskPath,
+					File: volumePath,
 				},
 			},
 			Target: &libvirtxml.DomainDiskTarget{
@@ -128,63 +146,106 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 	return vm, nil
 }
 
-func ensureBaseImage(path string) error {
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return err
+// ensureBaseVolume ensures that the Alpine base image exists as a libvirt
+// storage volume.
+func ensureBaseVolume(conn *libvirt.Connect, pool *libvirt.StoragePool) (*libvirt.StorageVol, error) {
+	volume, err := pool.LookupStorageVolByName(baseImageName)
+	if err == nil {
+		return volume, nil
 	}
 
+	// The base volume does not exist yet.
+	// Download the Alpine image and import it into the libvirt storage pool.
 	resp, err := http.Get(alpineImageURL)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("download alpine image: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(
-			"failed to download Alpine image: %s",
+		return nil, fmt.Errorf(
+			"download Alpine image: %s",
 			resp.Status,
 		)
 	}
 
-	file, err := os.Create(path)
+	volumeXML := &libvirtxml.StorageVolume{
+		Name: baseImageName,
+		Target: &libvirtxml.StorageVolumeTarget{
+			Format: &libvirtxml.StorageVolumeTargetFormat{
+				Type: "qcow2",
+			},
+		},
+	}
+
+	xml, err := volumeXML.Marshal()
 	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, resp.Body)
-	return err
-}
-
-func createDisk(baseImage, diskPath string) error {
-	if _, err := os.Stat(diskPath); err == nil {
-		return fmt.Errorf("disk already exists: %s", diskPath)
-	} else if !os.IsNotExist(err) {
-		return err
+		return nil, fmt.Errorf("marshal volume XML: %w", err)
 	}
 
-	cmd := exec.Command(
-		"qemu-img",
-		"create",
-		"-f",
-		"qcow2",
-		"-F",
-		"qcow2",
-		"-b",
-		baseImage,
-		diskPath,
-	)
-
-	output, err := cmd.CombinedOutput()
+	volume, err = pool.StorageVolCreateXML(xml, 0)
 	if err != nil {
-		return fmt.Errorf(
-			"qemu-img failed: %w: %s",
-			err,
-			string(output),
-		)
+		return nil, fmt.Errorf("create base volume: %w", err)
 	}
 
-	return nil
+	stream, err := conn.NewStream(0)
+	if err != nil {
+		volume.Delete(0)
+		volume.Free()
+
+		return nil, fmt.Errorf("create upload stream: %w", err)
+	}
+
+	if err := volume.Upload(
+		stream,
+		0,
+		uint64(resp.ContentLength),
+		0,
+	); err != nil {
+		stream.Abort()
+		stream.Free()
+
+		volume.Delete(0)
+		volume.Free()
+
+		return nil, fmt.Errorf("start upload base volume: %w", err)
+	}
+
+	err = stream.SendAll(func(_ *libvirt.Stream, size int) ([]byte, error) {
+		buf := make([]byte, size)
+
+		n, err := resp.Body.Read(buf)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+
+		return buf[:n], nil
+	})
+	if err != nil {
+		stream.Abort()
+		stream.Free()
+
+		volume.Delete(0)
+		volume.Free()
+
+		return nil, fmt.Errorf("upload base volume: %w", err)
+	}
+
+	if err := stream.Finish(); err != nil {
+		stream.Free()
+
+		volume.Delete(0)
+		volume.Free()
+
+		return nil, fmt.Errorf("finish upload base volume: %w", err)
+	}
+
+	if err := stream.Free(); err != nil {
+		volume.Delete(0)
+		volume.Free()
+
+		return nil, fmt.Errorf("free upload stream: %w", err)
+	}
+
+	return volume, nil
 }
