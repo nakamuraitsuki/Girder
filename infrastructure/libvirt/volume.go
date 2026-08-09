@@ -76,6 +76,31 @@ func (c *Client) UploadVolume(vol *libvirt.StorageVol, r io.Reader, length uint6
 	return stream.Finish()
 }
 
+// deleteVolume removes the domain-specific disk volume created by CreateVM.
+// It is a no-op if the volume does not exist (e.g. already deleted, or the
+// domain was defined without going through CreateVM).
+func (c *Client) deleteVolume(domainName string) error {
+	pool, err := c.conn.LookupStoragePoolByName(storagePoolName)
+	if err != nil {
+		return fmt.Errorf("lookup storage pool: %w", err)
+	}
+	defer pool.Free()
+
+	volumeName := fmt.Sprintf("%s.qcow2", domainName)
+
+	vol, err := pool.LookupStorageVolByName(volumeName)
+	if err != nil {
+		// Volume already gone; nothing to do.
+		return nil
+	}
+	defer vol.Free()
+
+	if err := vol.Delete(0); err != nil {
+		return fmt.Errorf("delete volume %s: %w", volumeName, err)
+	}
+	return nil
+}
+
 // streamWriter adapts *libvirt.Stream to io.Writer.
 // This is unexported and confined to this file: it exists only because
 // Stream.Send has the io.Writer signature but not the io.Writer name.

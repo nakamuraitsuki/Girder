@@ -127,3 +127,69 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 
 	return vm, nil
 }
+
+// StopVM sends an ACPI shutdown signal to the domain.
+func (c *Client) StopVM(name string) error {
+	vm, err := c.conn.LookupDomainByName(name)
+	if err != nil {
+		return fmt.Errorf("lookup domain: %w", err)
+	}
+	defer vm.Free()
+
+	if err := vm.Shutdown(); err != nil {
+		return fmt.Errorf("shutdown domain: %w", err)
+	}
+
+	return nil
+}
+
+// DestroyVM forcefully stops and undefines the domain.
+func (c *Client) DestroyVM(name string) error {
+	vm, err := c.conn.LookupDomainByName(name)
+	if err != nil {
+		return fmt.Errorf("lookup domain: %w", err)
+	}
+	defer vm.Free()
+
+	if err := vm.Destroy(); err != nil {
+		return fmt.Errorf("destroy domain: %w", err)
+	}
+
+	if err := vm.Undefine(); err != nil {
+		return fmt.Errorf("undefine domain: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteVM stops and undefines the domain, and also deletes its associated storage volume.
+// DeleteVM removes the domain definition and its associated disk volume.
+// If the domain is still running, it is forcibly stopped first.
+func (c *Client) DeleteVM(name string) error {
+	dom, err := c.conn.LookupDomainByName(name)
+	if err != nil {
+		return fmt.Errorf("lookup domain: %w", err)
+	}
+	defer dom.Free()
+
+	active, err := dom.IsActive()
+	if err != nil {
+		return fmt.Errorf("check domain state: %w", err)
+	}
+	if active {
+		if err := dom.Destroy(); err != nil {
+			return fmt.Errorf("destroy domain before delete: %w", err)
+		}
+	}
+
+	if err := dom.Undefine(); err != nil {
+		return fmt.Errorf("undefine domain: %w", err)
+	}
+
+	if err := c.deleteVolume(name); err != nil {
+		return fmt.Errorf("delete volume: %w", err)
+	}
+
+	return nil
+}
+
