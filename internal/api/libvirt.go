@@ -19,6 +19,7 @@ type CreateVMRequest struct {
 //
 // The handler maps the general VM representation used by the HTTP API to the
 // libvirt-specific Domain representation before passing it to the libvirt client.
+// It is registered as POST /api/libvirt/vms
 func createVMHandler(client *libvirt.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateVMRequest
@@ -45,5 +46,35 @@ func createVMHandler(client *libvirt.Client) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
+	}
+}
+
+// stopVMHandler handles VM stop requests.
+//
+// It is registered as POST /api/libvirt/vms/{name}/stop
+func stopVMHandler(client *libvirt.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Path[len("/api/libvirt/vms/") : len(r.URL.Path)-len("/stop")]
+		if err := client.StopVM(name); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+	}
+}
+
+// deleteVMHandler handles VM deletion requests.
+//
+// It is registered as DELETE /api/libvirt/vms/{name}
+func deleteVMHandler(client *libvirt.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Path[len("/api/libvirt/vms/"):]
+		if err := client.DeleteVM(name); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
