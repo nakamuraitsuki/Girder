@@ -12,5 +12,9 @@ func NewRouter(libvirtClient *libvirt.Client) http.Handler {
 	mux.HandleFunc("POST /api/libvirt/vms", createVMHandler(libvirtClient))
 	mux.HandleFunc("POST /api/libvirt/vms/{name}/stop", stopVMHandler(libvirtClient))
 	mux.HandleFunc("DELETE /api/libvirt/vms/{name}", deleteVMHandler(libvirtClient))
+
+	mux.HandleFunc("POST /api/libvirt/vms/{name}/nics", attachNICHandler(libvirtClient))
+	mux.HandleFunc("GET /api/libvirt/vms/{name}/nics", listNICsHandler(libvirtClient))
+	
 	return mux
 }
