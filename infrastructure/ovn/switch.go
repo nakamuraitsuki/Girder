@@ -2,12 +2,15 @@ package ovn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/ovn-kubernetes/libovsdb/client"
 )
 
-var ErrSwitchAlreadyExists = fmt.Errorf("logical switch already exists")
+var ErrSwitchAlreadyExists = fmt.Errorf("switch already exists")
+var ErrSwitchNotFound = fmt.Errorf("switch not found")
 
 // CreateSwitch creates a new isolated virtual switch (OVN Logical_Switch).
 // No Logical_Switch_Port is created here; port attachment is handled later
@@ -38,6 +41,9 @@ func (c *Client) CreateSwitch(ctx context.Context, name string) (*LogicalSwitch,
 func (c *Client) GetSwitch(ctx context.Context, name string) (*LogicalSwitch, error) {
 	sw := &LogicalSwitch{Name: name}
 	if err := c.nb.Get(ctx, sw); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return nil, fmt.Errorf("switch %q not found: %w", name, ErrSwitchNotFound)
+		}
 		return nil, fmt.Errorf("failed to get switch %q: %w", name, err)
 	}
 	return sw, nil
