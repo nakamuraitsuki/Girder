@@ -6,6 +6,7 @@ require (
 	github.com/ovn-kubernetes/libovsdb v0.8.1
 	libvirt.org/go/libvirt v1.12006.0
 	libvirt.org/go/libvirtxml v1.12005.0
+	github.com/google/uuid v1.6.0
 )
 
 require (
@@ -20,7 +21,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.26.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
