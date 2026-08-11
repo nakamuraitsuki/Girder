@@ -26,7 +26,6 @@ type NICResponse struct {
 func attachNICHandler(client *libvirt.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
-
 		var req AttachNICRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -64,7 +63,7 @@ func listNICsHandler(client *libvirt.Client) http.HandlerFunc {
 			return
 		}
 
-		resp := make([]NICResponse, len(ifaces))
+		resp := make([]NICResponse, 0, len(ifaces))
 		for _, iface := range ifaces {
 			resp = append(resp, toNICResponse(iface))
 		}
