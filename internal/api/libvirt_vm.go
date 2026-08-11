@@ -54,7 +54,7 @@ func createVMHandler(client *libvirt.Client) http.HandlerFunc {
 // It is registered as POST /api/libvirt/vms/{name}/stop
 func stopVMHandler(client *libvirt.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Path[len("/api/libvirt/vms/") : len(r.URL.Path)-len("/stop")]
+		name := r.PathValue("name")
 		if err := client.StopVM(name); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -69,7 +69,7 @@ func stopVMHandler(client *libvirt.Client) http.HandlerFunc {
 // It is registered as DELETE /api/libvirt/vms/{name}
 func deleteVMHandler(client *libvirt.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Path[len("/api/libvirt/vms/"):]
+		name := r.PathValue("name")
 		if err := client.DeleteVM(name); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
