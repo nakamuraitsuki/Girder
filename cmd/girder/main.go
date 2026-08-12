@@ -22,7 +22,7 @@ func main() {
 
 	ovnEndpoint := os.Getenv("GIRDER_OVN_NB_ENDPOINT")
 	if ovnEndpoint == "" {
-		ovnEndpoint = "unix:/var/run/ovn/ovnnb_db.sock" // Development default
+		ovnEndpoint = "tcp:127.0.0.1:6641" // Development default
 	}
 
 	ovnClient, err := ovn.Connect(ctx, ovnEndpoint)
