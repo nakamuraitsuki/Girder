@@ -45,7 +45,7 @@ func (c *Client) CreateLogicalSwitchPort(
 
 	port.UUID = uuid.NewString()
 
-	ops, err := c.nb.Create(ctx, port)
+	ops, err := c.nb.Create(port)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create logical switch port %q: %w", port.Name, err)
 	}
@@ -62,11 +62,31 @@ func (c *Client) GetLogicalSwitchPort(
 	ctx context.Context,
 	name string,
 ) (*LogicalSwitchPort, error) {
-	// TODO: list Logical_Switch_Port records.
+	var ports []LogicalSwitchPort
+	if err := c.nb.List(ctx, &ports); err != nil {
+		return nil, fmt.Errorf("failed to list logical switch ports: %w", err)
+	}
 
-	// TODO: handle not found / ambiguous name.
+	var found *LogicalSwitchPort
+	for _, port := range ports {
+		if port.Name != name {
+			continue
+		}
 
-	return nil, nil
+		if found != nil {
+			return nil, fmt.Errorf(
+				"logical switch port %q is ambiguous: multiple ports share this name (environment may have been modified outside Girder)",
+				name,
+			)
+		}
+
+		found = &port
+	}
+
+	if found == nil {
+		return nil, fmt.Errorf("logical switch port %q not found: %w", name, ErrLogicalSwitchPortNotFound)
+	}
+	return found, nil
 }
 
 // DeleteLogicalSwitchPort deletes the Logical_Switch_Port identified by name.
@@ -74,11 +94,19 @@ func (c *Client) DeleteLogicalSwitchPort(
 	ctx context.Context,
 	name string,
 ) error {
-	// TODO: get the target port.
+	port, err := c.GetLogicalSwitchPort(ctx, name)
+	if err != nil {
+		return fmt.Errorf("failed to get logical switch port %q: %w", name, err)
+	}
 
-	// TODO: build delete operation.
+	ops, err := c.nb.Where(port).Delete()
+	if err != nil {
+		return fmt.Errorf("failed to build delete op for logical switch port %q: %w", name, err)
+	}
 
-	// TODO: transact delete operation.
+	if _, err := c.nb.Transact(ctx, ops...); err != nil {
+		return fmt.Errorf("failed to delete logical switch port %q: %w", name, err)
+	}
 
 	return nil
 }
