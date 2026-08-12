@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/ovn-kubernetes/libovsdb/client"
 )
 
 var ErrSwitchAlreadyExists = fmt.Errorf("switch already exists")
@@ -16,7 +15,7 @@ var ErrSwitchNotFound = fmt.Errorf("switch not found")
 // No Logical_Switch_Port is created here; port attachment is handled later
 // by the NIC connecntion flow (ConnectNIC).
 func (c *Client) CreateSwitch(ctx context.Context, name string) (*LogicalSwitch, error) {
-	_, err := c.GetSwitch(ctx, name);
+	_, err := c.GetSwitch(ctx, name)
 	switch {
 	case err == nil:
 		// Already exists, return error
@@ -46,15 +45,35 @@ func (c *Client) CreateSwitch(ctx context.Context, name string) (*LogicalSwitch,
 }
 
 // GetSwitch returns the virtual switch identified by name.
+//
+// Name uniqueness is not enforced by OVN itself, but Girder enforces it
+// at creation time (see CreateSwitch). If multiple switches share the same
+// name, it means the environment was modified outside of Girder (e.g. via
+// ovn-nbctl directly), and Girder cannot safely resolve which one the
+// caller means. In that case, GetSwitch returns an error rather than
+// silently picking one — the driver's state is the source of truth, and
+// Girder should surface that ambiguity honestly instead of hiding it.
 func (c *Client) GetSwitch(ctx context.Context, name string) (*LogicalSwitch, error) {
-	sw := &LogicalSwitch{Name: name}
-	if err := c.nb.Get(ctx, sw); err != nil {
-		if errors.Is(err, client.ErrNotFound) {
-			return nil, fmt.Errorf("switch %q not found: %w", name, ErrSwitchNotFound)
-		}
-		return nil, fmt.Errorf("failed to get switch %q: %w", name, err)
+	var switches []LogicalSwitch
+	if err := c.nb.List(ctx, &switches); err != nil {
+		return nil, fmt.Errorf("failed to list switches: %w", err)
 	}
-	return sw, nil
+
+	var found *LogicalSwitch
+	for i := range switches {
+		if switches[i].Name != name {
+			continue
+		}
+		if found != nil {
+			return nil, fmt.Errorf("switch %q is ambiguous: multiple switches share this name (environment may have been modified outside Girder)", name)
+		}
+		found = &switches[i]
+	}
+
+	if found == nil {
+		return nil, fmt.Errorf("switch %q not found: %w", name, ErrSwitchNotFound)
+	}
+	return found, nil
 }
 
 // DeleteSwitch deletes the virtual switch identified by name.
