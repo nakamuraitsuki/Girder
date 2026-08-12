@@ -27,3 +27,23 @@ sudo ovs-vsctl set open . external-ids:ovn-encap-type=geneve
 sudo ovs-vsctl set open . external-ids:ovn-encap-ip=127.0.0.1
 sudo ovs-vsctl set open . external-ids:system-id=$(hostname)
 ```
+
+Socketは、OVN界隈ではRootでしか触らないので、アプリから触る際にはEndpointが妥当。
+```bash
+sudo ovn-nbctl set-connection ptcp:6641:127.0.0.1
+```
+でTCP受付を行って、アプリエンドポイントもそこにする。
+
+## 補足
+当然、他のVM関連も入ってないといけない。
+```bash
+sudo apt update
+sudo apt install libvirt-dev pkg-config build-essential
+sudo apt install libvirt-daemon-system libvirt-clients qemu-system-x86 virtinst
+```
+
+Libvirtの管理グループに入っていないがゆえに起動できないことがある。
+```bash
+sudo usermod -aG libvirt $USER
+```
+即時反映はされないので、再ログイン必要。
