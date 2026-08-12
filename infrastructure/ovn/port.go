@@ -2,6 +2,7 @@ package ovn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -15,14 +16,43 @@ func (c *Client) CreateLogicalSwitchPort(
 	ctx context.Context,
 	port *LogicalSwitchPort,
 ) (*LogicalSwitchPort, error) {
-	// TODO: validate / resolve values that must not be supplied by caller.
+	// validate input.
+	if port == nil {
+		return nil, errors.New("logical switch port is nil")
+	}
 
-	// TODO: check whether the port already exists.
+	if port.Name == "" {
+		return nil, errors.New("logical switch port name is required")
+	}
 
-	// Values controlled by Girder.
+	_, err := c.GetLogicalSwitchPort(ctx, port.Name)
+	switch {
+	case err == nil:
+		return nil, fmt.Errorf(
+			"failed to create logical switch port %q: %w",
+			port.Name,
+			ErrLogicalSwitchPortAlreadyExists,
+		)
+	case errors.Is(err, ErrLogicalSwitchPortNotFound):
+		// proceed
+	default:
+		return nil, fmt.Errorf(
+			"failed to create logical switch port %q: %w",
+			port.Name,
+			err,
+		)
+	}
+
 	port.UUID = uuid.NewString()
 
-	// TODO: build and transact create operation.
+	ops, err := c.nb.Create(ctx, port)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create logical switch port %q: %w", port.Name, err)
+	}
+
+	if _, err := c.nb.Transact(ctx, ops...); err != nil {
+		return nil, fmt.Errorf("failed to create logical switch port %q: %w", port.Name, err)
+	}
 
 	return port, nil
 }
