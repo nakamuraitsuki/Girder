@@ -42,7 +42,7 @@ func (c *Client) CreateSwitch(ctx context.Context, name string) (*LogicalSwitch,
 		return nil, fmt.Errorf("failed to create switch %q: %w", name, err)
 	}
 
-	return c.GetSwitch(ctx, name)
+	return sw, nil
 }
 
 // GetSwitch returns the virtual switch identified by name.
