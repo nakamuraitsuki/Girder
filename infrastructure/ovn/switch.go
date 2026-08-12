@@ -16,8 +16,16 @@ var ErrSwitchNotFound = fmt.Errorf("switch not found")
 // No Logical_Switch_Port is created here; port attachment is handled later
 // by the NIC connecntion flow (ConnectNIC).
 func (c *Client) CreateSwitch(ctx context.Context, name string) (*LogicalSwitch, error) {
-	if _, err := c.GetSwitch(ctx, name); err == nil {
+	_, err := c.GetSwitch(ctx, name);
+	switch {
+	case err == nil:
+		// Already exists, return error
 		return nil, fmt.Errorf("failed to create switch %q: %w", name, ErrSwitchAlreadyExists)
+	case errors.Is(err, ErrSwitchNotFound):
+		// Not found, proceed to create
+	default:
+		// Unexpected error, return it
+		return nil, fmt.Errorf("failed to check existing switch %q: %w", name, err)
 	}
 
 	sw := &LogicalSwitch{
