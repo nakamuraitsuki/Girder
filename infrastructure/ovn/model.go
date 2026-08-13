@@ -49,13 +49,13 @@ type LogicalSwitchPort struct {
 	Tag        *int    `ovsdb:"tag"`
 
 	// Port State
-	Up     *bool `ovsdb:"up"`
-	Enable *bool `ovsdb:"enable"`
+	Up      *bool `ovsdb:"up"`
+	Enabled *bool `ovsdb:"enabled"`
 
 	// Addressing
-	Address          []string `ovsdb:"addresses"`
-	DynamicAddresses *string  `ovsdb:"dynamic_addresses"`
-	PortSecurity     []string `ovsdb:"port_security"`
+	Addresses        []string `ovsdb:"addresses"`
+	DynamicAddresses *string   `ovsdb:"dynamic_addresses"`
+	PortSecurity     []string  `ovsdb:"port_security"`
 
 	// Peer
 	Peer *string `ovsdb:"peer"`
@@ -69,9 +69,9 @@ type LogicalSwitchPort struct {
 	HealthChecks []string `ovsdb:"health_checks"`
 
 	// HA
-	HAChassingGroup *string `ovsdb:"ha_chassis_group"`
+	HAChassisGroup *string `ovsdb:"ha_chassis_group"`
 
-	// Common Cloumuns
+	// Common Columns
 	ExternalIDs map[string]string `ovsdb:"external_ids"`
 }
 
