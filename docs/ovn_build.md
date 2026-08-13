@@ -52,3 +52,12 @@ Libvirtの管理グループに入っていないがゆえに起動できない�
 sudo usermod -aG libvirt $USER
 ```
 即時反映はされないので、再ログイン必要。
+
+Poolも、Libvirt入れただけだとできないので、
+```bash
+sudo virsh pool-define-as default dir \
+  --target /var/lib/libvirt/images
+
+sudo virsh pool-start default
+sudo virsh pool-autostart default
+```
