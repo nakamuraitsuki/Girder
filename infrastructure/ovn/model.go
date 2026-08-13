@@ -57,16 +57,12 @@ type LogicalSwitchPort struct {
 	DynamicAddresses *string   `ovsdb:"dynamic_addresses"`
 	PortSecurity     []string  `ovsdb:"port_security"`
 
-	// Peer
-	Peer *string `ovsdb:"peer"`
-
 	// DHCP
 	DHCPv4Options *string `ovsdb:"dhcpv4_options"`
 	DHCPv6Options *string `ovsdb:"dhcpv6_options"`
 
 	// Mirror / Health Check
 	MirrorRules  []string `ovsdb:"mirror_rules"`
-	HealthChecks []string `ovsdb:"health_checks"`
 
 	// HA
 	HAChassisGroup *string `ovsdb:"ha_chassis_group"`
