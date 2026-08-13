@@ -26,6 +26,8 @@ sudo ovs-vsctl set open . external-ids:ovn-remote="unix:/var/run/ovn/ovnsb_db.so
 sudo ovs-vsctl set open . external-ids:ovn-encap-type=geneve
 sudo ovs-vsctl set open . external-ids:ovn-encap-ip=127.0.0.1
 sudo ovs-vsctl set open . external-ids:system-id=$(hostname)
+
+sudo systemctl restart ovn-controller
 ```
 
 Socketは、OVN界隈ではRootでしか触らないので、アプリから触る際にはEndpointが妥当。
