@@ -8,7 +8,9 @@ import (
 
 	"github.com/nakamuraitsuki/Girder/infrastructure/libvirt"
 	"github.com/nakamuraitsuki/Girder/infrastructure/ovn"
+	"github.com/nakamuraitsuki/Girder/infrastructure/ovs"
 	"github.com/nakamuraitsuki/Girder/internal/api"
+	"github.com/nakamuraitsuki/Girder/internal/core"
 )
 
 func main() {
@@ -31,7 +33,19 @@ func main() {
 	}
 	defer ovnClient.Close()
 
-	router := api.NewRouter(libvirtClient, ovnClient)
+	ovsEndpoint := os.Getenv("GIRDER_OVS_DB_ENDPOINT")
+	if ovsEndpoint == "" {
+		ovsEndpoint = "unix:/var/run/openvswitch/db.sock" // Development default
+	}
+	ovsClient, err := ovs.Connect(ctx, ovsEndpoint)
+	if err != nil {
+		log.Fatalf("failed to connect to OVS DB: %v", err)
+	}
+	defer ovsClient.Close()
+
+	core := core.NewCore(libvirtClient, ovnClient, ovsClient)
+	
+	router := api.NewRouter(libvirtClient, ovnClient, ovsClient, core)
 
 	log.Println("Starting server on :8080")
 
