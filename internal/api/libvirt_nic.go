@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/nakamuraitsuki/Girder/infrastructure/libvirt"
 	"libvirt.org/go/libvirtxml"
@@ -30,6 +31,10 @@ func attachNICHandler(client *libvirt.Client) http.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
+		}
+
+		if !strings.HasPrefix(req.LogicalName, "ua-") {
+			req.LogicalName = "ua-" + req.LogicalName
 		}
 
 		iface := &libvirtxml.DomainInterface{
@@ -67,11 +72,12 @@ func listNICsHandler(client *libvirt.Client) http.HandlerFunc {
 		for _, iface := range ifaces {
 			resp = append(resp, toNICResponse(iface))
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}
 }
+
 // toNICResponse is a helper function that converts a libvirt DomainInterface to a NICResponse.
 func toNICResponse(iface libvirtxml.DomainInterface) NICResponse {
 	resp := NICResponse{

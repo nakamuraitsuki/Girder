@@ -5,9 +5,16 @@ import (
 
 	"github.com/nakamuraitsuki/Girder/infrastructure/libvirt"
 	"github.com/nakamuraitsuki/Girder/infrastructure/ovn"
+	"github.com/nakamuraitsuki/Girder/infrastructure/ovs"
+	"github.com/nakamuraitsuki/Girder/internal/core"
 )
 
-func NewRouter(libvirtClient *libvirt.Client, ovnClient *ovn.Client) http.Handler {
+func NewRouter(
+	libvirtClient *libvirt.Client,
+	ovnClient *ovn.Client,
+	ovsClient *ovs.Client,
+	core *core.Core,
+) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /api/libvirt/vms", createVMHandler(libvirtClient))
@@ -20,5 +27,8 @@ func NewRouter(libvirtClient *libvirt.Client, ovnClient *ovn.Client) http.Handle
 	mux.HandleFunc("POST /api/ovn/switches", createSwitchHandler(ovnClient))
 	mux.HandleFunc("GET /api/ovn/switches/{name}", getSwitchHandler(ovnClient))
 	mux.HandleFunc("DELETE /api/ovn/switches/{name}", deleteSwitchHandler(ovnClient))
+
+	mux.HandleFunc("POST /api/topology/nic-switch-connections", connectNICtoSwitchHandler(core))
+	mux.HandleFunc("DELETE /api/topology/nic-switch-connections", disconnectNICfromSwitchHandler(core))
 	return mux
 }
