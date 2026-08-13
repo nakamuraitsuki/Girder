@@ -35,7 +35,7 @@ func main() {
 
 	ovsEndpoint := os.Getenv("GIRDER_OVS_DB_ENDPOINT")
 	if ovsEndpoint == "" {
-		ovsEndpoint = "unix:/var/run/openvswitch/db.sock" // Development default
+		ovsEndpoint = "tcp:127.0.0.1:6640" // Development default
 	}
 	ovsClient, err := ovs.Connect(ctx, ovsEndpoint)
 	if err != nil {

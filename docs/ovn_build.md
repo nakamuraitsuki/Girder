@@ -34,6 +34,11 @@ sudo ovn-nbctl set-connection ptcp:6641:127.0.0.1
 ```
 でTCP受付を行って、アプリエンドポイントもそこにする。
 
+OVSも同様。
+```bash
+sudo ovs-vsctl set-manager ptcp:6640:127.0.0.1
+```
+
 ## 補足
 当然、他のVM関連も入ってないといけない。
 ```bash
