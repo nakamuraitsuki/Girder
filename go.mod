@@ -3,10 +3,11 @@ module github.com/nakamuraitsuki/Girder
 go 1.24.1
 
 require (
+	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/ovn-kubernetes/libovsdb v0.8.1
 	libvirt.org/go/libvirt v1.12006.0
 	libvirt.org/go/libvirtxml v1.12005.0
-	github.com/google/uuid v1.6.0
 )
 
 require (

@@ -20,6 +20,7 @@ func NewRouter(
 	mux.HandleFunc("POST /api/libvirt/vms", createVMHandler(libvirtClient))
 	mux.HandleFunc("POST /api/libvirt/vms/{name}/stop", stopVMHandler(libvirtClient))
 	mux.HandleFunc("DELETE /api/libvirt/vms/{name}", deleteVMHandler(libvirtClient))
+	mux.HandleFunc("GET /api/libvirt/vms/{name}/console", consoleHandler(libvirtClient))
 
 	mux.HandleFunc("POST /api/libvirt/vms/{name}/nics", attachNICHandler(libvirtClient))
 	mux.HandleFunc("GET /api/libvirt/vms/{name}/nics", listNICsHandler(libvirtClient))
@@ -29,8 +30,10 @@ func NewRouter(
 	mux.HandleFunc("DELETE /api/ovn/switches/{name}", deleteSwitchHandler(ovnClient))
 
 	mux.HandleFunc("POST /api/ovn/routers", createRouterHandler(ovnClient))
+	mux.HandleFunc("POST /api/ovn/router-interfaces/address", setRouterInterfaceAddressHandler(ovnClient))
 	mux.HandleFunc("GET /api/ovn/routers/{name}", getRouterHandler(ovnClient))
 	mux.HandleFunc("DELETE /api/ovn/routers/{name}", deleteRouterHandler(ovnClient))
+
 
 	mux.HandleFunc("POST /api/topology/nic-switch-connections", connectNICtoSwitchHandler(core))
 	mux.HandleFunc("DELETE /api/topology/nic-switch-connections", disconnectNICfromSwitchHandler(core))
