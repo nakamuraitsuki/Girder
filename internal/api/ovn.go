@@ -98,6 +98,7 @@ type createRouterRequest struct {
 	Name string `json:"name"`
 }
 
+// createRouterHandler handles POST /api/ovn/routers
 func createRouterHandler(ovnClient *ovn.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req createRouterRequest
@@ -128,6 +129,7 @@ func createRouterHandler(ovnClient *ovn.Client) http.HandlerFunc {
 	}
 }
 
+// getRouterHandler handles GET /api/ovn/routers/{name}
 func getRouterHandler(ovnClient *ovn.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
@@ -151,6 +153,7 @@ func getRouterHandler(ovnClient *ovn.Client) http.HandlerFunc {
 	}
 }
 
+// deleteRouterHandler handles DELETE /api/ovn/routers/{name}
 func deleteRouterHandler(ovnClient *ovn.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
@@ -169,5 +172,52 @@ func deleteRouterHandler(ovnClient *ovn.Client) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+type setRouterInterfaceAddressRequest struct {
+	Router    string `json:"router"`
+	Interface string `json:"interface"`
+	Address   string `json:"address"`
+}
+
+func setRouterInterfaceAddressHandler(ovnClient *ovn.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req setRouterInterfaceAddressRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.Router == "" || req.Interface == "" || req.Address == "" {
+			http.Error(w, "Missing required fields", http.StatusBadRequest)
+			return
+		}
+
+		router, err := ovnClient.GetRouter(r.Context(), req.Router)
+		if err != nil {
+			if errors.Is(err, ovn.ErrLogicalRouterNotFound) {
+				http.Error(w, "Router not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "Failed to get router", http.StatusInternalServerError)
+			return
+		}
+
+		if err := ovnClient.SetLogicalRouterPortNetworks(
+			r.Context(),
+			router,
+			req.Interface,
+			[]string{req.Address},
+		); err != nil {
+			if errors.Is(err, ovn.ErrLogicalRouterPortNotFound) {
+				http.Error(w, "Router interface not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "Failed to set router interface address", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
