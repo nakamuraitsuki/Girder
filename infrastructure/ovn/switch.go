@@ -14,31 +14,30 @@ var ErrSwitchNotFound = fmt.Errorf("switch not found")
 // CreateSwitch creates a new isolated virtual switch (OVN Logical_Switch).
 // No Logical_Switch_Port is created here; port attachment is handled later
 // by the NIC connecntion flow (ConnectNIC).
-func (c *Client) CreateSwitch(ctx context.Context, name string) (*LogicalSwitch, error) {
-	_, err := c.GetSwitch(ctx, name)
+func (c *Client) CreateSwitch(ctx context.Context, sw *LogicalSwitch) (*LogicalSwitch, error) {
+	_, err := c.GetSwitch(ctx, sw.Name)
 	switch {
 	case err == nil:
 		// Already exists, return error
-		return nil, fmt.Errorf("failed to create switch %q: %w", name, ErrSwitchAlreadyExists)
+		return nil, fmt.Errorf("failed to create switch %q: %w", sw.Name, ErrSwitchAlreadyExists)
 	case errors.Is(err, ErrSwitchNotFound):
 		// Not found, proceed to create
 	default:
 		// Unexpected error, return it
-		return nil, fmt.Errorf("failed to check existing switch %q: %w", name, err)
+		return nil, fmt.Errorf("failed to check existing switch %q: %w", sw.Name, err)
 	}
 
-	sw := &LogicalSwitch{
-		UUID: uuid.NewString(),
-		Name: name,
+	if sw.UUID == "" {
+		sw.UUID = uuid.NewString()
 	}
 
 	ops, err := c.nb.Create(sw)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build create op for switch %q: %w", name, err)
+		return nil, fmt.Errorf("failed to build create op for switch %q: %w", sw.Name, err)
 	}
 
 	if _, err := c.nb.Transact(ctx, ops...); err != nil {
-		return nil, fmt.Errorf("failed to create switch %q: %w", name, err)
+		return nil, fmt.Errorf("failed to create switch %q: %w", sw.Name, err)
 	}
 
 	return sw, nil

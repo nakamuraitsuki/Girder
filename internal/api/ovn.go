@@ -32,7 +32,11 @@ func createSwitchHandler(client *ovn.Client) http.HandlerFunc {
 			return
 		}
 
-		sw, err := client.CreateSwitch(r.Context(), req.Name)
+		swReq := &ovn.LogicalSwitch{
+			Name: req.Name,
+		}
+
+		sw, err := client.CreateSwitch(r.Context(), swReq)
 		if err != nil {
 			if errors.Is(err, ovn.ErrSwitchAlreadyExists) {
 				http.Error(w, err.Error(), http.StatusConflict)
