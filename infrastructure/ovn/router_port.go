@@ -1,6 +1,7 @@
 package ovn
 
 import (
+	"slices"
 	"context"
 	"errors"
 	"fmt"
@@ -32,7 +33,7 @@ func (c *Client) CreateLogicalRouterPort(
 		return nil, errors.New("logical router port name is required")
 	}
 
-	_, err := c.GetLogicalRouterPort(ctx, port.Name)
+	_, err := c.GetLogicalRouterPort(ctx, router, port.Name)
 	switch {
 	case err == nil:
 		return nil, fmt.Errorf(
@@ -82,33 +83,34 @@ func (c *Client) CreateLogicalRouterPort(
 // GetLogicalRouterPort returns the Logical_Router_Port identified by name.
 func (c *Client) GetLogicalRouterPort(
 	ctx context.Context,
+	router *LogicalRouter,
 	name string,
 ) (*LogicalRouterPort, error) {
+	if router == nil {
+		return nil, errors.New("logical router is nil")
+	}
+
 	var ports []LogicalRouterPort
 	if err := c.nb.List(ctx, &ports); err != nil {
 		return nil, fmt.Errorf("failed to list logical router ports: %w", err)
 	}
 
-	var found *LogicalRouterPort
 	for _, port := range ports {
 		if port.Name != name {
 			continue
 		}
 
-		if found != nil {
-			return nil, fmt.Errorf(
-				"logical router port %q is ambiguous: multiple ports share this name (environment may have been modified outside Girder)",
-				name,
-			)
-		}
-
-		found = &port
+		if slices.Contains(router.Ports, port.UUID) {
+				return &port, nil
+			}
 	}
 
-	if found == nil {
-		return nil, fmt.Errorf("logical router port %q not found: %w", name, ErrLogicalRouterPortNotFound)
-	}
-	return found, nil
+	return nil, fmt.Errorf(
+		"logical router port %q not found in logical router %q: %w",
+		name,
+		router.Name,
+		ErrLogicalRouterPortNotFound,
+	)
 }
 
 // DeleteLogicalRouterPort deletes the Logical_Router_Port identified by name.
@@ -121,7 +123,7 @@ func (c *Client) DeleteLogicalRouterPort(
 		return errors.New("logical router is nil")
 	}
 
-	port, err := c.GetLogicalRouterPort(ctx, name)
+	port, err := c.GetLogicalRouterPort(ctx, router, name)
 	if err != nil {
 		return fmt.Errorf("failed to get logical router port %q: %w", name, err)
 	}

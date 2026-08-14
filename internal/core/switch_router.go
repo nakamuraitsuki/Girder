@@ -64,7 +64,7 @@ func (c *Core) DisconnectSwitchFromRouter(ctx context.Context, switchName, route
 		return fmt.Errorf("failed to get logical router %q: %w", routerName, err)
 	}
 
-	if _, err := c.ovn.GetLogicalRouterPort(ctx, switchName); err != nil {
+	if _, err := c.ovn.GetLogicalRouterPort(ctx, router, switchName); err != nil {
 		if errors.Is(err, ovn.ErrLogicalRouterPortNotFound) {
 			return fmt.Errorf("switch %q is not connected to router %q", switchName, routerName)
 		}
