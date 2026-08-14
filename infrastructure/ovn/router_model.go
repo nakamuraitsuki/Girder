@@ -37,9 +37,7 @@ type LogicalRouterPort struct {
 
 	Enabled *bool `ovsdb:"enabled"`
 
-	Ipv6RaConfigs        []string `ovsdb:"ipv6_ra_configs"`
 	Ipv6Prefix           []string `ovsdb:"ipv6_prefix"`
-	Ipv6PrefixDelegation bool     `ovsdb:"ipv6_prefix_delegation"`
 
 	Peer *string `ovsdb:"peer"`
 
