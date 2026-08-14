@@ -154,3 +154,33 @@ func (c *Client) DeleteLogicalRouterPort(
 
 	return nil
 }
+
+// SetLogicalRouterPortNetworks sets the networks configured on a Logical_Router_port.
+func (c *Client) SetLogicalRouterPortNetworks(
+	ctx context.Context,
+	router *LogicalRouter,
+	portName string,
+	networks []string,
+) error {
+	if router == nil {
+		return errors.New("logical router is nil")
+	}
+
+	port, err := c.GetLogicalRouterPort(ctx, router, portName)
+	if err != nil {
+		return fmt.Errorf("failed to get logical router port %q: %w", portName, err)
+	}
+
+	port.Networks = networks
+
+	ops, err := c.nb.Where(port).Update(port, &port.Networks)
+	if err != nil {
+		return fmt.Errorf("failed to build update op for logical router port %q: %w", portName, err)
+	}
+
+	if _, err := c.nb.Transact(ctx, ops...); err != nil {
+		return fmt.Errorf("failed to update logical router port %q: %w", portName, err)
+	}
+
+	return nil
+}
