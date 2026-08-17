@@ -124,6 +124,7 @@ type Interface struct {
 const (
 	integrationBridgeName = "br-int"
 	externalIDKeyIfaceID  = "iface-id"
+	externalIDKeyBridgeMappings = "ovn-bridge-mappings"
 )
 
 func DatabaseModel() (model.ClientDBModel, error) {
