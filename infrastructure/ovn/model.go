@@ -8,5 +8,6 @@ func DatabaseModel() (model.ClientDBModel, error) {
 		"Logical_Switch_Port": &LogicalSwitchPort{},
 		"Logical_Router":      &LogicalRouter{},
 		"Logical_Router_Port": &LogicalRouterPort{},
+		"Logical_Router_Static_Route": &LogicalRouterStaticRoute{},
 	})
 }

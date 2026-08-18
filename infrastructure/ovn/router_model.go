@@ -47,3 +47,19 @@ type LogicalRouterPort struct {
 
 	ExternalIDs map[string]string `ovsdb:"external_ids"`
 }
+
+// LogicalRouterStaticRoute is the model for the OVN_Northbound
+// Logical_Router_Static_Route table.
+//
+// ref: https://www.ovn.org/support/dist-docs/ovn-nb.5.html (Logical_Router_Static_Route TABLE)
+type LogicalRouterStaticRoute struct {
+	UUID string `ovsdb:"_uuid"`
+
+	IPPrefix string  `ovsdb:"ip_prefix"`
+	Nexthop  string  `ovsdb:"nexthop"`
+	Policy   *string `ovsdb:"policy"`
+
+	OutputPort *string `ovsdb:"output_port"`
+
+	ExternalIDs map[string]string `ovsdb:"external_ids"`
+}
