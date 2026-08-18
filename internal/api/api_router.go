@@ -31,6 +31,7 @@ func NewRouter(
 
 	mux.HandleFunc("POST /api/ovn/routers", createRouterHandler(ovnClient))
 	mux.HandleFunc("POST /api/ovn/router-interfaces/address", setRouterInterfaceAddressHandler(ovnClient))
+	mux.HandleFunc("POST /api/ovn/routers/{name}/default-route", setDefaultRouteHandler(ovnClient))
 	mux.HandleFunc("GET /api/ovn/routers/{name}", getRouterHandler(ovnClient))
 	mux.HandleFunc("DELETE /api/ovn/routers/{name}", deleteRouterHandler(ovnClient))
 
