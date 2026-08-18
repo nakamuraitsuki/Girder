@@ -40,6 +40,8 @@ func NewRouter(
 
 	mux.HandleFunc("POST /api/topology/switch-router-connections", connectSwitchToRouterHandler(core))
 	mux.HandleFunc("DELETE /api/topology/switch-router-connections", disconnectSwitchFromRouterHandler(core))
+	
+	mux.HandleFunc("POST /api/topology/gateways", createGatewayHandler(core))
 
 	return mux
 }
