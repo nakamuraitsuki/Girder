@@ -13,7 +13,9 @@ func (c *Core) CreateGateway(
 	gwName string,
 	physicalNICName string,
 ) error {
-	ovsBridge, err := c.ovs.CreateBridge(ctx, physicalNICName)
+	// To Avoid multiple names.
+	ovsBridgeName := fmt.Sprintf("br-%s", physicalNICName)
+	ovsBridge, err := c.ovs.CreateBridge(ctx, ovsBridgeName)
 	if err != nil {
 		return fmt.Errorf("failed to create OVS bridge: %w", err)
 	}
