@@ -32,6 +32,7 @@ func (c *Core) ConnectNICtoSwitch(ctx context.Context, vmName, nicLogicalName, s
 	lsp, err := c.ovn.CreateLogicalSwitchPort(ctx, sw, &ovn.LogicalSwitchPort{
 		Name: nicLogicalName,
 		Type: "",
+		Addresses: []string{iface.MAC.Address},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create logical switch port %q on switch %q: %w", nicLogicalName, switchName, err)

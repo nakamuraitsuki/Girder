@@ -53,6 +53,14 @@ func (c *Client) CreateLogicalRouterPort(
 
 	port.UUID = uuid.NewString()
 
+	if port.MAC == "" {
+		mac, err := generateMAC()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate MAC for logical router port %q: %w", port.Name, err)
+		}
+		port.MAC = mac
+	}
+
 	createOps, err := c.nb.Create(port)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create logical router port %q: %w", port.Name, err)

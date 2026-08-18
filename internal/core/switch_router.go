@@ -40,6 +40,7 @@ func (c *Core) ConnectSwitchToRouter(ctx context.Context, switchName, routerName
 	if _, err := c.ovn.CreateLogicalSwitchPort(ctx, sw, &ovn.LogicalSwitchPort{
 		Name: routerName,
 		Type: "router",
+		Addresses: []string{"router"},
 		Options: map[string]string{
 			"router-port": lrp.Name,
 		},
