@@ -86,18 +86,23 @@ func (c *Client) deleteVolume(domainName string) error {
 	}
 	defer pool.Free()
 
-	volumeName := fmt.Sprintf("%s.qcow2", domainName)
+	for _, volumeName := range []string{
+		fmt.Sprintf("%s.qcow2", domainName),
+		fmt.Sprintf("%s-seed.iso", domainName),
+	} {
+		vol, err := pool.LookupStorageVolByName(volumeName)
+		if err != nil {
+			continue
+		}
 
-	vol, err := pool.LookupStorageVolByName(volumeName)
-	if err != nil {
-		// Volume already gone; nothing to do.
-		return nil
-	}
-	defer vol.Free()
+		if err := vol.Delete(0); err != nil {
+			vol.Free()
+			return fmt.Errorf("delete volume %s: %w", volumeName, err)
+		}
 
-	if err := vol.Delete(0); err != nil {
-		return fmt.Errorf("delete volume %s: %w", volumeName, err)
+		vol.Free()
 	}
+
 	return nil
 }
 

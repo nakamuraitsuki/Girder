@@ -28,6 +28,17 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 	}
 	defer baseVolume.Free()
 
+	cloudInitVolume, err := c.createCloudInitVolume(pool, domain.Name)
+	if err != nil {
+		return nil, fmt.Errorf("create cloud-init volume: %w", err)
+	}
+	defer cloudInitVolume.Free()
+
+	cloudInitPath, err := cloudInitVolume.GetPath()
+	if err != nil {
+		return nil, fmt.Errorf("get cloud-init volume path: %w", err)
+	}
+
 	volumeName := fmt.Sprintf("%s.qcow2", domain.Name)
 
 	volumeXML := &libvirtxml.StorageVolume{
@@ -79,6 +90,27 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 			},
 		},
 	)
+	
+	// Adds the cloud-init disk to the domain if it is not already present.
+	domain.Devices.Disks = append(
+		domain.Devices.Disks,
+		libvirtxml.DomainDisk{
+			Device: "cdrom",
+			Driver: &libvirtxml.DomainDiskDriver{
+				Name: "qemu",
+				Type: "raw",
+			},
+			Source: &libvirtxml.DomainDiskSource{
+				File: &libvirtxml.DomainDiskSourceFile{
+					File: cloudInitPath,
+				},
+			},
+			Target: &libvirtxml.DomainDiskTarget{
+				Dev: "sda",
+				Bus: "sata",
+			},
+		},
+	)
 
 	domain.OS = &libvirtxml.DomainOS{
 		Type: &libvirtxml.DomainOSType{
@@ -104,31 +136,6 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 			Target: &libvirtxml.DomainConsoleTarget{
 				Type: "serial",
 				Port: &port,
-			},
-		},
-	)
-
-	seedPath, err := createCloudInitSeed(domain.Name)
-	if err != nil {
-		return nil, fmt.Errorf("create cloud-init seed: %w", err)
-	}
-
-	domain.Devices.Disks = append(
-		domain.Devices.Disks,
-		libvirtxml.DomainDisk{
-			Device: "cdrom",
-			Driver: &libvirtxml.DomainDiskDriver{
-				Name: "qemu",
-				Type: "raw",
-			},
-			Source: &libvirtxml.DomainDiskSource{
-				File: &libvirtxml.DomainDiskSourceFile{
-					File: seedPath,
-				},
-			},
-			Target: &libvirtxml.DomainDiskTarget{
-				Dev: "sda",
-				Bus: "sata",
 			},
 		},
 	)
