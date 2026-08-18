@@ -33,9 +33,11 @@ func (c *Client) createCloudInitVolume(
 	seedPath := filepath.Join(tmpDir, "seed.iso")
 
 	userData := `#cloud-config
-password: root
-chpasswd:
-  expire: false
+users:
+  - name: root
+    lock_passwd: false
+    plain_text_passwd: root
+
 ssh_pwauth: true
 `
 

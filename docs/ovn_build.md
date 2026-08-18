@@ -63,3 +63,9 @@ sudo virsh pool-define-as default dir \
 sudo virsh pool-start default
 sudo virsh pool-autostart default
 ```
+
+あと、CloudeInitのために
+```bash
+sudo apt update
+sudo apt install cloud-image-utils
+```
