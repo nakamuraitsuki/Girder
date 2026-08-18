@@ -108,6 +108,31 @@ func (c *Client) CreateVM(domain *libvirtxml.Domain) (*libvirt.Domain, error) {
 		},
 	)
 
+	seedPath, err := createCloudInitSeed(domain.Name)
+	if err != nil {
+		return nil, fmt.Errorf("create cloud-init seed: %w", err)
+	}
+
+	domain.Devices.Disks = append(
+		domain.Devices.Disks,
+		libvirtxml.DomainDisk{
+			Device: "cdrom",
+			Driver: &libvirtxml.DomainDiskDriver{
+				Name: "qemu",
+				Type: "raw",
+			},
+			Source: &libvirtxml.DomainDiskSource{
+				File: &libvirtxml.DomainDiskSourceFile{
+					File: seedPath,
+				},
+			},
+			Target: &libvirtxml.DomainDiskTarget{
+				Dev: "sda",
+				Bus: "sata",
+			},
+		},
+	)
+
 	// Define and start the VM using prepared domain XML. 
 	xml, err := domain.Marshal()
 	if err != nil {
