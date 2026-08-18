@@ -37,6 +37,9 @@ func (c *Core) CreateGateway(
 			Name: gwName,
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("failed to create logical switch: %w", err)
+	}
 
 	if err := c.ovs.AddBridgeMapping(ctx, sw.Name, ovsBridge.Name); err != nil {
 		return fmt.Errorf("failed to add bridge mapping: %w", err)
