@@ -37,8 +37,9 @@ func (c *Core) ConnectSwitchToRouter(ctx context.Context, switchName, routerName
 
 	// OVN: creates Logical_Switch_Port(type="router") on the switch side,
 	// bound to the router port via options["router-port"].
+	switchPortName := routerName + "-to-" + switchName
 	if _, err := c.ovn.CreateLogicalSwitchPort(ctx, sw, &ovn.LogicalSwitchPort{
-		Name: routerName,
+		Name: switchPortName,
 		Type: "router",
 		Addresses: []string{"router"},
 		Options: map[string]string{
@@ -74,8 +75,9 @@ func (c *Core) DisconnectSwitchFromRouter(ctx context.Context, switchName, route
 
 	// First, remove the switch-side port to avoid leaving a dangling
 	// options["router-port"] reference if router port deletion fails.
-	if err := c.ovn.DeleteLogicalSwitchPort(ctx, sw, routerName); err != nil {
-		return fmt.Errorf("failed to delete logical switch port %q on switch %q: %w", routerName, switchName, err)
+	switchPortName := routerName + "-to-" + switchName
+	if err := c.ovn.DeleteLogicalSwitchPort(ctx, sw, switchPortName); err != nil {
+		return fmt.Errorf("failed to delete logical switch port %q on switch %q: %w", switchPortName, switchName, err)
 	}
 
 	// Then, remove the router-side port.

@@ -83,7 +83,7 @@ func (c *Core) DisconnectNICfromSwitch(ctx context.Context, vmName, nicLogicalNa
 		return fmt.Errorf("failed to get switch %q: %w", switchName, err)
 	}
 
-	if _, err := c.ovn.GetLogicalSwitchPort(ctx, sw, nicLogicalName); err != nil {
+	if _, err := c.ovn.GetLogicalSwitchPort(ctx, nicLogicalName); err != nil {
 		if errors.Is(err, ovn.ErrLogicalSwitchPortNotFound) {
 			return fmt.Errorf("nic %q is not connected to switch %q", nicLogicalName, switchName)
 		}

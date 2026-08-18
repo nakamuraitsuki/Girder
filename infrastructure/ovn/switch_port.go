@@ -29,7 +29,7 @@ func (c *Client) CreateLogicalSwitchPort(
 		return nil, errors.New("logical switch port name is required")
 	}
 
-	_, err := c.GetLogicalSwitchPort(ctx, sw, port.Name)
+	_, err := c.GetLogicalSwitchPort(ctx, port.Name)
 	switch {
 	case err == nil:
 		return nil, fmt.Errorf(
@@ -79,13 +79,8 @@ func (c *Client) CreateLogicalSwitchPort(
 // GetLogicalSwitchPort returns the Logical_Switch_Port identified by name.
 func (c *Client) GetLogicalSwitchPort(
 	ctx context.Context,
-	sw *LogicalSwitch,
 	name string,
 ) (*LogicalSwitchPort, error) {
-	if sw == nil {
-		return nil, errors.New("logical switch is nil")
-	}
-
 	var ports []LogicalSwitchPort
 	if err := c.nb.List(ctx, &ports); err != nil {
 		return nil, fmt.Errorf("failed to list logical switch ports: %w", err)
@@ -95,18 +90,12 @@ func (c *Client) GetLogicalSwitchPort(
 		if port.Name != name {
 			continue
 		}
-
-		for _, uuid := range sw.Ports {
-			if uuid == port.UUID {
-				return &port, nil
-			}
-		}
+		return &port, nil
 	}
 
 	return nil, fmt.Errorf(
-		"logical switch port %q not found in logical switch %q: %w",
+		"logical switch port %q not found: %w",
 		name,
-		sw.Name,
 		ErrLogicalSwitchPortNotFound,
 	)
 }
@@ -121,7 +110,7 @@ func (c *Client) DeleteLogicalSwitchPort(
 		return errors.New("logical switch is nil")
 	}
 
-	port, err := c.GetLogicalSwitchPort(ctx, sw, name)
+	port, err := c.GetLogicalSwitchPort(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to get logical switch port %q: %w", name, err)
 	}
