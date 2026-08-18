@@ -12,8 +12,10 @@ import (
 var ErrPortAlreadyExists = fmt.Errorf("port already exists")
 var ErrPortNotFound = fmt.Errorf("port not found")
 
-// AddPort creates a Port and Interface on br-int and connects it to bridge.
-func (c *Client) AddPort(ctx context.Context, port *Port, iface *Interface) (*Port, error) {
+// AddPort creates a Port and Interface and attaches them to the given bridge,
+// in a single OVSDB transaction. Which bridge to use (br-int for NIC↔Switch,
+// or a Gateway bridge) is the caller's (Core's) decision.
+func (c *Client) AddPort(ctx context.Context, bridge *Bridge, port *Port, iface *Interface) (*Port, error) {
 	if port == nil {
 		return nil, errors.New("port is nil")
 	}
@@ -35,11 +37,6 @@ func (c *Client) AddPort(ctx context.Context, port *Port, iface *Interface) (*Po
 		// processd
 	default:
 		return nil, fmt.Errorf("failed to get port: %w", err)
-	}
-
-	bridge, err := c.getIntegrationBridge(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get integration bridge: %w", err)
 	}
 
 	iface.UUID = uuid.NewString()
@@ -105,7 +102,7 @@ func (c *Client) GetPort(ctx context.Context, name string) (*Port, error) {
 
 // RemovePort removes the Port with the given name. If multiple ports share the same name, an error is returned.
 func (c *Client) RemovePort(ctx context.Context, name string) error {
-	bridge, err := c.getIntegrationBridge(ctx)
+	bridge, err := c.GetIntegrationBridge(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to remove port %q: %w", name, err)
 	}

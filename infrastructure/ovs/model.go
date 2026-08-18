@@ -2,6 +2,30 @@ package ovs
 
 import "github.com/ovn-kubernetes/libovsdb/model"
 
+// OpenVSwitch represents the Open_vSwitch DB root table.
+// There must be exactly one record in this table.
+// ref: ovs-vswitchd.conf.db(5)
+type OpenVSwitch struct {
+	UUID            string            `ovsdb:"_uuid"`
+	Datapaths       map[string]string `ovsdb:"datapaths"`
+	Bridges         []string          `ovsdb:"bridges"`
+	SSL             *string           `ovsdb:"ssl"`
+	NextCfg         int               `ovsdb:"next_cfg"`
+	CurCfg          int               `ovsdb:"cur_cfg"`
+	DpdkInitialized bool              `ovsdb:"dpdk_initialized"`
+	Statistics      map[string]string `ovsdb:"statistics"`
+	OVSVersion      *string           `ovsdb:"ovs_version"`
+	DBVersion       *string           `ovsdb:"db_version"`
+	SystemType      *string           `ovsdb:"system_type"`
+	SystemVersion   *string           `ovsdb:"system_version"`
+	DpdkVersion     *string           `ovsdb:"dpdk_version"`
+	DatapathTypes   []string          `ovsdb:"datapath_types"`
+	IfaceTypes      []string          `ovsdb:"iface_types"`
+	ManagerOptions  []string          `ovsdb:"manager_options"`
+	OtherConfig     map[string]string `ovsdb:"other_config"`
+	ExternalIDs     map[string]string `ovsdb:"external_ids"`
+}
+
 // Bridge represents Open_vSwitch DB bridge table.
 // ref: ovs-vswitchd.conf.db(5)
 type Bridge struct {
@@ -100,10 +124,12 @@ type Interface struct {
 const (
 	integrationBridgeName = "br-int"
 	externalIDKeyIfaceID  = "iface-id"
+	externalIDKeyBridgeMappings = "ovn-bridge-mappings"
 )
 
 func DatabaseModel() (model.ClientDBModel, error) {
 	return model.NewClientDBModel("Open_vSwitch", map[string]model.Model{
+		"Open_vSwitch": &OpenVSwitch{},
 		"Bridge": &Bridge{},
 		"Port": &Port{},
 		"Interface": &Interface{},

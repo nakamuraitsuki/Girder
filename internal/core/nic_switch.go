@@ -38,7 +38,17 @@ func (c *Core) ConnectNICtoSwitch(ctx context.Context, vmName, nicLogicalName, s
 	}
 
 	// OVS: creates Port/Interface on br-int and binds iface-id
+	bridge, err := c.ovs.GetIntegrationBridge(ctx)
+	if err != nil {
+		// Rollback OVN logical switch port creation
+		if delErr := c.ovn.DeleteLogicalSwitchPort(ctx, sw, lsp.Name); delErr != nil {
+			return fmt.Errorf("failed to get integration bridge and failed to delete logical switch port %q: %v, %v", lsp.Name, err, delErr)
+		}
+		return fmt.Errorf("failed to get integration bridge (ovs setup incomplete?) and rolled back logical switch port %q: %w", lsp.Name, err)
+	}
+	
 	if _, err := c.ovs.AddPort(ctx,
+		bridge,
 		&ovs.Port{Name: tapDevice},
 		&ovs.Interface{
 			Name: tapDevice,
