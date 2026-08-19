@@ -52,19 +52,18 @@ function layoutResources(
 ): Record<string, { x: number; y: number }> {
   const columnX: Record<TopologyResource["kind"], number> = {
     gateway: 0,
-    vm: 0,
-    switch: 340,
-    router: 680,
+    router: 320,
+    switch: 680,
+    vm: 1020,
   };
   const columnCursor: Record<string, number> = {};
   const result: Record<string, { x: number; y: number }> = {};
 
-  // gatewayを最上段、VMをその下に積む都合上、種別ごとにy開始位置をずらす
   const rowStartY: Record<TopologyResource["kind"], number> = {
     gateway: 0,
-    vm: 140,
-    switch: 40,
     router: 40,
+    switch: 40,
+    vm: 0,
   };
 
   for (const r of resources) {
@@ -147,40 +146,55 @@ export function Canvas() {
     saveStoredPositions(positionsRef.current);
 
     setNodes(
-      snapshot.resources.map((r): Node => ({
-        id: r.id,
-        type: r.kind,
-        position: positions[r.id],
-        data:
-          r.kind === "router"
-            ? { resource: r, onPortClick: handlePortClick }
-            : { resource: r },
-      })),
+      snapshot.resources.map((r): Node => {
+        if (r.kind === "router") {
+          const gw = snapshot.resources.find(
+            (x) => x.kind === "gateway" && x.connectedRouter === r.name,
+          );
+          return {
+            id: r.id, type: r.kind, position: positions[r.id],
+            data: { resource: r, connectedGatewayName: gw?.name ?? null, onPortClick: handlePortClick },
+          };
+        }
+        if (r.kind === "switch") {
+          const routerNames = new Set(
+            snapshot.resources.filter((x) => x.kind === "router").map((x) => x.name),
+          );
+          return { id: r.id, type: r.kind, position: positions[r.id], data: { resource: r, routerNames } };
+        }
+        return { id: r.id, type: r.kind, position: positions[r.id], data: { resource: r } };
+      }),
     );
   }, [snapshot, setNodes, handlePortClick]);
 
   // connectionEntries -> React Flow edges への変換 (status別に色分け)
   useEffect(() => {
+    // connectionEntries -> edges: switch-router/gateway-routerのhandle idを明示
     const nextEdges: Edge[] = Object.values(connectionEntries).map((entry) => {
       const { conn, status } = entry;
       let source = conn.source;
       let sourceHandle: string | undefined;
+      let targetHandle: string | undefined;
+
       if (conn.kind === "nic-switch") {
         const [vmId, alias] = conn.source.split(":");
         source = vmId;
         sourceHandle = alias;
+        targetHandle = alias; // Switch側もports行のid=aliasに対応
+      } else if (conn.kind === "switch-router") {
+        sourceHandle = "to-router";
+        // Router側のport名 = switchName という命名規則
+        const sw = snapshot?.resources.find((r) => r.id === conn.source);
+        targetHandle = sw?.kind === "switch" ? sw.name : undefined;
+      } else if (conn.kind === "gateway-router") {
+        sourceHandle = "out";
+        targetHandle = "uplink";
       }
+
       return {
-        id: conn.id,
-        source,
-        sourceHandle,
-        target: conn.target,
-        targetHandle: conn.kind === "nic-switch" ? "in" : "in",
+        id: conn.id, source, sourceHandle, target: conn.target, targetHandle,
         animated: status === "pending",
-        style: {
-          stroke: STATUS_COLOR[status],
-          strokeDasharray: status === "pending" ? "4 3" : undefined,
-        },
+        style: { stroke: STATUS_COLOR[status], strokeDasharray: status === "pending" ? "4 3" : undefined },
         label: status === "error" ? entry.errorMessage : undefined,
         labelStyle: { fill: "#ef5d5d", fontSize: 10 },
         data: { status },

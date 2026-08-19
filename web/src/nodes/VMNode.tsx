@@ -37,7 +37,7 @@ export function VMNode({ data, selected }: NodeProps & { data: VMNodeData }) {
             <span className="node-row__meta">{nic.macAddress}</span>
             <Handle
               type="source"
-              position={Position.Right}
+              position={Position.Left}
               id={nic.alias}
               style={{ position: "absolute", right: -11, top: "50%" }}
             />

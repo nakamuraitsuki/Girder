@@ -130,3 +130,9 @@
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-sm);
 }
+
+.node-row--ghost {
+  border-style: dashed;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
