@@ -1,0 +1,33 @@
+:root {
+  /* Base surface - 深い藍黒。ネットワーク図/オシロスコープ的な基調 */
+  --bg: #0a0d12;
+  --bg-grid-line: #151a22;
+  --surface: #12161d;
+  --surface-raised: #171c25;
+  --border: #232a36;
+  --border-strong: #323b4a;
+
+  --text-primary: #e6e9ef;
+  --text-secondary: #8b93a3;
+  --text-tertiary: #565f70;
+
+  /* リソース種別ごとのアクセント。TCP/IPスタックの層をイメージした配色 */
+  --accent-vm: #5b9dfb;      /* Compute層 */
+  --accent-vm-dim: #1c2b45;
+  --accent-switch: #35c98b;  /* L2層 */
+  --accent-switch-dim: #14332a;
+  --accent-router: #f0a93c;  /* L3層 */
+  --accent-router-dim: #3a2c14;
+  --accent-gateway: #ef5d5d; /* 外部境界 */
+  --accent-gateway-dim: #3a1b1b;
+
+  --status-pending: #f0a93c;
+  --status-error: #ef5d5d;
+  --status-confirmed: #35c98b;
+
+  --font-ui: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+}

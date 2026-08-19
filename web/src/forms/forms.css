@@ -1,0 +1,126 @@
+.form-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 10, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.form-panel {
+  width: 320px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.form-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-panel__kind {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--accent-router);
+}
+
+.form-panel__close {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.form-panel__close:hover {
+  color: var(--text-primary);
+}
+
+.form-panel__title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 6px 0 14px;
+  color: var(--text-primary);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.form-field__label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.form-field__input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.form-field__input:focus {
+  border-color: var(--accent-vm);
+  outline: none;
+}
+
+.form-panel__error {
+  font-size: 11px;
+  color: var(--status-error);
+  margin-bottom: 10px;
+}
+
+.form-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn--ghost:hover {
+  color: var(--text-primary);
+}
+
+.btn--primary {
+  background: var(--accent-vm);
+  border-color: var(--accent-vm);
+  color: #0a0d12;
+  font-weight: 600;
+}
+
+.btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn--primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
