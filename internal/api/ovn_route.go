@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/nakamuraitsuki/Girder/infrastructure/ovn"
+	"github.com/nakamuraitsuki/Girder/internal/core"
 )
 
 type setRouterInterfaceAddressRequest struct {
@@ -40,7 +41,7 @@ func setRouterInterfaceAddressHandler(ovnClient *ovn.Client) http.HandlerFunc {
 		if err := ovnClient.SetLogicalRouterPortNetworks(
 			r.Context(),
 			router,
-			req.Interface,
+			core.RouterPortName(req.Interface),
 			[]string{req.Address},
 		); err != nil {
 			if errors.Is(err, ovn.ErrLogicalRouterPortNotFound) {
