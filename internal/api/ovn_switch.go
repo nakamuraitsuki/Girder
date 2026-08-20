@@ -93,7 +93,3 @@ func toSwitchResponse(sw *ovn.LogicalSwitch) SwitchResponse {
 		Name: sw.Name,
 	}
 }
-
-type createRouterRequest struct {
-	Name string `json:"name"`
-}

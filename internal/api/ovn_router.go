@@ -8,6 +8,10 @@ import (
 	"github.com/nakamuraitsuki/Girder/infrastructure/ovn"
 )
 
+type createRouterRequest struct {
+	Name string `json:"name"`
+}
+
 // createRouterHandler handles POST /api/ovn/routers
 func createRouterHandler(ovnClient *ovn.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
