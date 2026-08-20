@@ -24,10 +24,24 @@ sudo systemctl status openvswitch-switch
 ```bash
 sudo ovs-vsctl set open . external-ids:ovn-remote="unix:/var/run/ovn/ovnsb_db.sock"
 sudo ovs-vsctl set open . external-ids:ovn-encap-type=geneve
-sudo ovs-vsctl set open . external-ids:ovn-encap-ip=127.0.0.1
+sudo ovs-vsctl set open . external-ids:ovn-encap-ip=<loop back 以外の何らかのIP> # ループ計算でCPUを張り付かせる可能性があるので、loは回避したい。
 sudo ovs-vsctl set open . external-ids:system-id=$(hostname)
 
 sudo systemctl restart ovn-controller
+```
+
+## 注意: system-id設定前にovn-controllerが自動起動している場合がある
+`apt install ovn-host`直後、ovn-controllerがsystem-id未設定のまま一度起動し、
+ランダムUUIDでChassisをSB DBに登録してしまうことがある。
+その後system-id等を設定してrestartしても、古いChassisレコードは自動削除されない。
+
+対策: 一連の設定完了後、必ず以下で重複が無いか確認する。
+```bash
+sudo ovn-sbctl show
+```
+もし複数Chassisが見えたら、使われていない方を削除する。
+```bash
+sudo ovn-sbctl chassis-del <古いChassis名またはUUID>
 ```
 
 Socketは、OVN界隈ではRootでしか触らないので、アプリから触る際にはEndpointが妥当。
